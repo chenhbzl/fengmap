@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓储可视化</title>
+    <link rel="stylesheet" href="./css/layui.css">
+    <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>仓储可视化</h2>
+    </div>
+    <div id="fengMap" class="fengMap"></div>
+    <form class="footer layui-form">
+        <div class="layui-row">
+            <div class="layui-col-md12 rowStyle">
+                <div class="selectStyle">
+                    <div>
+                        <label class="layui-form-label">货位：</label>
+                        <select lay-search id="storageData" name="storageData" lay-filter="searchStorage"></select>
+                    </div>
+                    <div><label class="layui-form-label">状态：</label>
+                        <select id="statusData" name="statusData">
+                            <option value="#F26077">RESERVE(预留)</option>
+                            <option value="#DEAD26">RECEIVE(收纳)</option>
+                            <option value="#3A8EED">PICK(拣货)</option>
+                            <option value="#68BC36">OUT(出库)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="smallInput">
+                    <label class="layui-form-label">尺寸(cm)：</label>
+                    <input id="longData" name="longData" class="layui-input inputStyle" placeholder="长"
+                           value="110"
+                           onkeyup="this.value = this.value.replace(/\D/g,'')"
+                           onafterpaste="this.value = this.value.replace(/\D/g,'')"/><span>*</span>
+                    <input id="wideData" name="wideData" class="layui-input inputStyle" placeholder="宽"
+                           value="50"
+                           onkeyup="this.value = this.value.replace(/\D/g,'')"
+                           onafterpaste="this.value = this.value.replace(/\D/g,'')"/><span>*</span>
+                    <input id="heightData" name="heightData" class="layui-input inputStyle" placeholder="高"
+                           value="60"
+                           onkeyup="this.value = this.value.replace(/\D/g,'')"
+                           onafterpaste="this.value = this.value.replace(/\D/g,'')"/>
+                </div>
+                <div>
+                    <label class="layui-form-label">数量：</label>
+                    <input id="numData" name="numData" placeholder="数量" class="layui-input inputBigStyle"
+                           onkeyup="this.value = this.value.replace(/\D/g,'');onChangeNum(this);"
+                           onafterpaste="this.value = this.value.replace(/\D/g,'')"/>
+                    <input id="boxNameRange" class="layui-input inputStyle" placeholder="货箱名称区间" disabled/>
+                </div>
+                <div class="boxStyle">
+                    <label class="layui-form-label">货箱名称：</label>
+                    <select lay-search id="boxData" name="boxData" lay-filter="searchBoxData"></select>
+                    <button id="deleteBtn" type="button" class="layui-btn layui-btn-normal" onClick="deleteBox()">删除
+                    </button>
+                </div>
+                <div class="btnGroup">
+                    <button type="button" id="playBtn" class="layui-btn layui-btn-normal" lay-submit
+                            lay-filter="formDemo">摆放
+                    </button>
+                    <button id="simulator" type="button" class="layui-btn layui-btn-normal" onClick="simulate()">数据模拟
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div id="detailCont" class="detailCont">
+        <h4>货箱详情</h4>
+        <p><label>货物名称：</label><span id="dNumData">华为MateBook E 2019款 12英寸4G</span></p>
+        <p><label>货物编号：</label><span id="dNameData"></span></p>
+        <p class="propertyStyle">
+            <label>货物属性：</label>长：<span id="dLongData"></span>宽：<span id="dWideData"></span>高：<span
+                id="dHeightData"></span>
+        </p>
+        <p><label>货物状态：</label><span id="dStatusData"></span></p>
+        <p><label>入库时间：</label><span id="dTimeData"></span></p>
+        <p class="imgStyle">
+            <img id="imgId" src="./images/storage1.jpeg"/>
+        </p>
+    </div>
+</div>
+<script src="./js/jquery.min.js"></script>
+<script src="./js/fengmap.min.js"></script>
+<script src="./js/layui.js"></script>
+<script src="./js/simulator.js"></script>
+<script src="./js/index.js"></script>
+</body>
+</html>
