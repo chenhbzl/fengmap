@@ -13,6 +13,8 @@ var map = null;
 var fmapID = '10347';
 //所有货箱数据
 var boxDataList = [];
+//所有货箱数据
+var initResult = [];
 //获取cookies中已存在货箱
 var storageCookies = null;
 //临时对象
@@ -35,13 +37,14 @@ var switchFlag = false;
 var simulator = null;
 //模拟盒子集合
 var simulateData = {};
-
+//定义定位点marker
+var locationMarker;
 //初始化模拟盒子集合
 var initData = {};
-
-//动态模拟仓储状态
-var simulator = null;
-
+//地图是否加载完成
+var mapIsOk = false;
+//选中货柜
+var selectedBoxName = "";
 $(function () {
 
     Date.prototype.Format = function (fmt) {
@@ -145,7 +148,17 @@ $(function () {
             moveToCenter(boxModel);
         });
     });
+
+    //运行刷新，重置locationMarker
+    if (locationMarker) {
+        locationMarker = null;
+    }
+
 });
+
+
+
+
 
 //将model对象聚焦到视野中心
 function moveToCenter(model) {
@@ -201,7 +214,7 @@ function initMap() {
 
         //显示指北针
         map.showCompass = true;
-
+        mapIsOk = true;
         var toolCtlOpt = {
             position: fengmap.FMControlPosition.RIGHT_TOP,
             //位置x,y的偏移量
@@ -217,7 +230,7 @@ function initMap() {
         //创建工具控件
         toolControl = new fengmap.FMToolControl(map, toolCtlOpt);
 
-        //获取集装箱数据
+        // //获取集装箱数据
         map.openTransportJson('./js/data.json', function (layer) {
             layer.every(function (item) {
                 item.setColor('#C0C0C0');
@@ -240,14 +253,60 @@ function initMap() {
             simulator = new Simulator(data);
 
             //渲染初始货箱
-            var initResult = simulator.createDatas(1000);
-            for (var i = 0; i < initResult.length; i++) {
-                var data = initResult[i];
-                if (data) {
-                    addBoxFunc(data, 'initData');
+            // var initResult = simulator.createDatas(600);
+            $.getJSON("./js/box.json", function (data){
+                initResult=data;
+                for (var i = 0; i < initResult.length; i++) {
+                    var data = initResult[i];
+                    if (data) {
+                        addBoxFunc(data, 'initData');
+                    }
+                }
+            })
+            
+        });
+
+        /**
+         * 这个方法是示例的定位sdk回调，实际根据使用的定位sdk不同，接口名称和方式可能会有差异
+         * */
+        updateLocation( (data)=> {
+            // console.log('aa',data)
+            if (mapIsOk) {
+                if (!locationMarker) {
+                    console.log('bb',data.x,data.y)
+                    /**
+                     * fengmap.FMLocationMarker 自定义图片标注对象，为自定义图层
+                     * https://www.fengmap.com/docs/js/v2.4.0_beta/fengmap.FMLocationMarker.html
+                     */
+                    locationMarker = new fengmap.FMLocationMarker({
+                        //x坐标值
+                        x: data.x,
+                        y: data.y,
+                        //图片地址
+                        url: './images/location.png',
+                        //楼层id
+                        groupID: 1,
+                        //图片尺寸
+                        size: 22,
+                        //marker标注高度
+                        height: 1,
+                        callback: function () {
+                            //回调函数
+                            console.log('定位点marker加载完成！');
+                        }
+                    });
+                    //添加定位点marker
+                    map.addLocationMarker(locationMarker);
+                } else {
+                    console.log('cc')
+                    //旋转locationMarker
+                     locationMarker.rotateTo({to: data.angle, duration: 1});
+                    //移动locationMarker
+                    locationMarker.moveTo({x: data.x, y: data.y, groupID: 1});
                 }
             }
-        });
+        })
+
     });
 
     map.on('mapClickNode', function (event) {
@@ -264,9 +323,9 @@ function initMap() {
             //设置高亮
             boxModel.setColor(hightLightColor);
             selectModel = boxModel;
-            console.log('选中盒子', boxModel);
             //显示详情数据
             showDetail(boxModel);
+            selectedBoxName=boxModel.name
         } else {
             $('#detailCont').css('display', 'none');
         }
@@ -291,6 +350,7 @@ function showDetail(model) {
 //初始化货箱信息
 function initBoxData() {
     var boxDataHtml = '';
+    console.log('test',storageCookies)
     if (storageCookies) {
         $.each(storageCookies, function (item, val) {
             if (val && val.length > 0) {
@@ -353,34 +413,45 @@ function onChangeNum(target) {
 
 //删除盒子
 function deleteBox() {
-    var selectItem = $('#boxData').find('option:selected').val();
-    boxDataList.map(function (item, index) {
-        if (selectItem == item) {
-            boxDataList.splice(index, 1);
+    initResult.map(function (item, index) {
+        if (selectedBoxName == item.name) {
+            initResult.splice(index, 1);
+            var boxObj= initData[item.name]
+            var boxParent = boxObj.parent;
+            boxParent.removeBox(boxObj);
+            boxParent.computeNormalBoxPos();
+            map.sortBox(1, item.FID);
         }
     });
-    var box = mapBoxData[selectItem];
-    var sIndex = selectItem.indexOf('-');
-    var storageData = selectItem;
-    if (sIndex != -1) {
-        storageData = storageData.substring(0, sIndex);
-    }
-    if (box) {
-        var boxParent = box.parent;
-        boxParent.removeBox(box);
-        boxParent.computeNormalBoxPos();
-    }
-    delete mapBoxData[selectItem];
+    console.log('initResult',initResult)
+    // var selectItem = $('#boxData').find('option:selected').val();
+    // boxDataList.map(function (item, index) {
+    //     if (selectItem == item) {
+    //         boxDataList.splice(index, 1);
+    //     }
+    // });
+    // var box = mapBoxData[selectItem];
+    // var sIndex = selectItem.indexOf('-');
+    // var storageData = selectItem;
+    // if (sIndex != -1) {
+    //     storageData = storageData.substring(0, sIndex);
+    // }
+    // if (box) {
+    //     var boxParent = box.parent;
+    //     boxParent.removeBox(box);
+    //     boxParent.computeNormalBoxPos();
+    // }
+    // delete mapBoxData[selectItem];
 
-    var sBoxData = storageCookies[storageData];
-    if (sBoxData && sBoxData.length > 0) {
-        sBoxData.map(function (item, index) {
-            if (item == selectItem) {
-                sBoxData.splice(index, 1);
-            }
-        });
-    }
-    initBoxData();
+    // var sBoxData = storageCookies[storageData];
+    // if (sBoxData && sBoxData.length > 0) {
+    //     sBoxData.map(function (item, index) {
+    //         if (item == selectItem) {
+    //             sBoxData.splice(index, 1);
+    //         }
+    //     });
+    // }
+    //  initBoxData();
 }
 
 //数据模拟
@@ -402,6 +473,7 @@ function simulate() {
         simulator.stop();
         for (var item in simulateData) {
             var box = simulateData[item];
+            console.log('box',box)
             if (box) {
                 var boxParent = box.parent;
                 boxParent.removeBox(box);
@@ -449,6 +521,7 @@ function addBoxFunc(data, type) {
         }else{
             simulateData[name] = box;
         }
+        // console.log('tt',initData)
         map.sortBox(1, fid);
     } else if (operation == 'remove') {
         var boxObj = simulateData[name];
@@ -476,3 +549,6 @@ function deleteBox(boxObj) {
     delete simulateData[name];
     map.sortBox(1, fid);
 }*/
+
+
+
