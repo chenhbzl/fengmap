@@ -39,12 +39,21 @@ var simulator = null;
 var simulateData = {};
 //定义定位点marker
 var locationMarker;
+//定义定位点marker
+var locationMarker1;
 //初始化模拟盒子集合
 var initData = {};
 //地图是否加载完成
 var mapIsOk = false;
 //选中货柜
 var selectedBoxName = "";
+//运输盒模型
+var boxData ={};
+
+var index=0;
+var index1=0;
+var hz=1000;
+
 $(function () {
 
     Date.prototype.Format = function (fmt) {
@@ -80,7 +89,7 @@ $(function () {
         //监听提交
         form.on('submit(formDemo)', function (data) {
             var formData = data.field;
-
+            console.log('aa',formData)
             var numData = formData.numData == '' ? 0 : parseInt(formData.numData);
             var wideData = parseFloat(formData.wideData) / 100;
             var heightData = parseFloat(formData.heightData) / 100;
@@ -150,9 +159,12 @@ $(function () {
     });
 
     //运行刷新，重置locationMarker
-    if (locationMarker) {
-        locationMarker = null;
-    }
+    // if (locationMarker) {
+    //     locationMarker = null;
+    // }
+    // if (locationMarker1) {
+    //     locationMarker1 = null;
+    // }
 
 });
 
@@ -263,54 +275,55 @@ function initMap() {
                     }
                 }
             })
+
+            //开始循环定位收发货
+            $.getJSON("./js/location.json", function (data){
+                var timer=setInterval(() => {
+                    if(index>data.length-1){
+                        index=0;
+                    }
+                    position=data[index];
+                    updateLocation(position);
+                    // position1=data[index+1];
+                    // updateLocation1(position1);
+                    if(index==1){
+                        addBox(174);
+                        setTimeout(() => {
+                            deleteBox("JS01-501");
+                        }, 300);
+                    }
+                    if(index==5){
+                        addBox(127);
+                        setTimeout(() => {
+                            deleteBox("JS01-501");
+                        }, 300);
+                        // deleteBox("LN07-503");
+                    }
+                    index++;
+                }, hz);
+         })
+            $.getJSON("./js/location1.json", function (data){
+                var timer=setInterval(() => {
+                    if(index1>data.length-1){
+                        index1=0;
+                    }
+                    position1=data[index1];
+                    updateLocation1(position1);
+                    index1++;
+                }, hz);
+         })
             
         });
 
-        /**
-         * 这个方法是示例的定位sdk回调，实际根据使用的定位sdk不同，接口名称和方式可能会有差异
-         * */
-        updateLocation( (data)=> {
-            // console.log('aa',data)
-            if (mapIsOk) {
-                if (!locationMarker) {
-                    console.log('bb',data.x,data.y)
-                    /**
-                     * fengmap.FMLocationMarker 自定义图片标注对象，为自定义图层
-                     * https://www.fengmap.com/docs/js/v2.4.0_beta/fengmap.FMLocationMarker.html
-                     */
-                    locationMarker = new fengmap.FMLocationMarker({
-                        //x坐标值
-                        x: data.x,
-                        y: data.y,
-                        //图片地址
-                        url: './images/location.png',
-                        //楼层id
-                        groupID: 1,
-                        //图片尺寸
-                        size: 22,
-                        //marker标注高度
-                        height: 1,
-                        callback: function () {
-                            //回调函数
-                            console.log('定位点marker加载完成！');
-                        }
-                    });
-                    //添加定位点marker
-                    map.addLocationMarker(locationMarker);
-                } else {
-                    console.log('cc')
-                    //旋转locationMarker
-                     locationMarker.rotateTo({to: data.angle, duration: 1});
-                    //移动locationMarker
-                    locationMarker.moveTo({x: data.x, y: data.y, groupID: 1});
-                }
-            }
-        })
+         
 
     });
-
+    var array=[];
     map.on('mapClickNode', function (event) {
         var boxModel = event.target;
+        // console.log('dd',`{"x": ${event.eventInfo.coord.x}, "y": ${event.eventInfo.coord.y}, "angle": 0},`)
+        array.push({"x": event.eventInfo.coord.x, "y": event.eventInfo.coord.y, "angle": 0})
+        console.log('array',array)
         if (selectModel && boxModel != selectModel) {
             if (defaultColor) {
                 selectModel.setColor(defaultColor);
@@ -326,11 +339,89 @@ function initMap() {
             //显示详情数据
             showDetail(boxModel);
             selectedBoxName=boxModel.name
+            console.log('name',selectedBoxName)
         } else {
             $('#detailCont').css('display', 'none');
         }
     });
 }
+
+/**
+ * 这个方法是示例的定位sdk回调，实际根据使用的定位sdk不同，接口名称和方式可能会有差异
+ * */
+function updateLocation(data) {
+    // console.log('aa',data)
+    if (mapIsOk) {
+        if (!locationMarker) {
+            console.log('bb',data.x,data.y)
+            /**
+             * fengmap.FMLocationMarker 自定义图片标注对象，为自定义图层
+             * https://www.fengmap.com/docs/js/v2.4.0_beta/fengmap.FMLocationMarker.html
+             */
+            locationMarker = new fengmap.FMLocationMarker({
+                //x坐标值
+                x: data.x,
+                y: data.y,
+                //图片地址
+                url: './images/location.png',
+                //楼层id
+                groupID: 1,
+                //图片尺寸
+                size: 22,
+                //marker标注高度
+                height: 1,
+                callback: function () {
+                    //回调函数
+                    console.log('定位点marker加载完成！');
+                }
+            });
+            //添加定位点marker
+            map.addLocationMarker(locationMarker);
+        } else {
+            //旋转locationMarker
+            locationMarker.rotateTo({to: data.angle, duration: 1});
+            //移动locationMarker
+            locationMarker.moveTo({x: data.x, y: data.y, groupID: 1});
+        }
+    }
+}
+function updateLocation1(data) {
+    // console.log('aa',data)
+    if (mapIsOk) {
+        if (!locationMarker1) {
+            console.log('bb',data.x,data.y)
+            /**
+             * fengmap.FMLocationMarker 自定义图片标注对象，为自定义图层
+             * https://www.fengmap.com/docs/js/v2.4.0_beta/fengmap.FMLocationMarker.html
+             */
+            locationMarker1 = new fengmap.FMLocationMarker({
+                //x坐标值
+                x: data.x,
+                y: data.y,
+                //图片地址
+                url: './images/location.png',
+                //楼层id
+                groupID: 1,
+                //图片尺寸
+                size: 22,
+                //marker标注高度
+                height: 1,
+                callback: function () {
+                    //回调函数
+                    console.log('定位点marker加载完成！');
+                }
+            });
+            //添加定位点marker
+            map.addLocationMarker(locationMarker1);
+        } else {
+            //旋转locationMarker
+            locationMarker1.rotateTo({to: data.angle, duration: 1});
+            //移动locationMarker
+            locationMarker1.moveTo({x: data.x, y: data.y, groupID: 1});
+        }
+    }
+}
+
 
 //展示详情
 function showDetail(model) {
@@ -412,7 +503,7 @@ function onChangeNum(target) {
 }
 
 //删除盒子
-function deleteBox() {
+function deleteBox(selectedBoxName) {
     initResult.map(function (item, index) {
         if (selectedBoxName == item.name) {
             initResult.splice(index, 1);
@@ -423,7 +514,7 @@ function deleteBox() {
             map.sortBox(1, item.FID);
         }
     });
-    console.log('initResult',initResult)
+    // console.log('initResult',initResult)
     // var selectItem = $('#boxData').find('option:selected').val();
     // boxDataList.map(function (item, index) {
     //     if (selectItem == item) {
@@ -452,6 +543,32 @@ function deleteBox() {
     //     });
     // }
     //  initBoxData();
+}
+//增加盒子
+function addBox(fid,boxData){
+    boxData={
+        name: "JS01-501",
+        FID: fid,
+        color: "#68BC36",
+        operation: "add",
+        length: 100,
+        width: 55,
+        height: 60,
+    }
+    var box = new fengmap.FreightBox({
+        width: parseFloat(boxData.width) / 100,
+        height: parseFloat(boxData.height) / 100,
+        length: parseFloat(boxData.length) / 100,
+        time: new Date().getTime()
+    })
+    box.setColor(boxData.color);
+    box.boxStatus = "OUT(出库)";
+    box.createTime = new Date().Format("yyyy-MM-dd HH:mm:ss");
+    map.addBox(1, boxData.FID, box);
+    box.name = boxData.name;
+    initData[box.name] = box;
+    map.sortBox(1, boxData.FID);
+    initResult.push(boxData);
 }
 
 //数据模拟
